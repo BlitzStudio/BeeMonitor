@@ -43,7 +43,7 @@ services:
       ME_CONFIG_BASICAUTH: false
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dbInterface.rule=Host(`beemonitor.blitzcloud.me`)"
+      - "traefik.http.routers.dbInterface.rule=Host(`dbint.blitzcloud.me`)"
       - "traefik.http.routers.dbInterface.entrypoints=https"
       - "traefik.http.routers.dbInterface.tls=true"
       - "traefik.http.services.dbInterface.loadbalancer.server.port=8000"
