@@ -27,8 +27,8 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
-    # ports:
-    #   - 27016:27017
+    ports:
+      - 27016:27017
     networks:
       - proxy
   mongo-express:
@@ -39,7 +39,7 @@ services:
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: example
-      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27016/
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@127.0.0.1:27016/
       ME_CONFIG_BASICAUTH: false
     labels:
       - "traefik.enable=true"
