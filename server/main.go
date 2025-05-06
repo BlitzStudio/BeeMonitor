@@ -69,7 +69,7 @@ func main() {
 		return c.SendString("Hello, MongoDB!")
 	})
 
-	app.Post("/data", func(c *fiber.Ctx) error {
+	app.Post("/", func(c *fiber.Ctx) error {
 		spew.Dump(c.Body())
 		fmt.Println(string(c.Body()))
 		beeData := new(Data)
