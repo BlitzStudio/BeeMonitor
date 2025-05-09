@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gofiber/fiber/v2"
@@ -20,9 +22,10 @@ type Data struct {
 }
 
 func main() {
+	// InsertToDb()
 	// MongoDB connection
 	client, err := mongo.NewClient(
-		options.Client().ApplyURI("mongodb://root:example@mongo:27017/"),
+		options.Client().ApplyURI("mongodb://root:example@127.0.0.1:27017/"),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -45,39 +48,46 @@ func main() {
 
 	// Routes
 	app.Get("/", func(c *fiber.Ctx) error {
-		testData := Data{Name: "main", TempInside: 33.5, TempOutside: 23.5}
+		// Calculate the time 30 minutes ago
+		thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Format(
+			time.RFC3339,
+		)
 
-		insertResult, err := collection.InsertOne(ctx, testData) // Use the context
+		// Construct the filter to get data within the last 30 minutes
+		filter := bson.M{"date": bson.M{"$gte": thirtyMinutesAgo}}
+
+		// Fetch data from MongoDB based on the filter
+		cursor, err := collection.Find(ctx, filter)
 		if err != nil {
-			log.Println(err) // Don't Fatal, handle the error
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to insert data")
+			log.Println(err)
+			return c.Status(
+				fiber.StatusInternalServerError,
+			).SendString("Failed to retrieve data")
 		}
-		fmt.Println("Inserted a single document: ", insertResult.InsertedID)
+		defer cursor.Close(ctx)
 
-		//Find the document you just inserted
-		var result Data
-		filter := bson.M{"_id": insertResult.InsertedID} // Filter by inserted ID
-		err = collection.FindOne(ctx, filter).Decode(&result)
-
-		if err != nil {
-			log.Println(err) // Handle the error, don't Fatal
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to find data")
+		var results []Data
+		if err := cursor.All(ctx, &results); err != nil {
+			log.Println(err)
+			return c.Status(
+				fiber.StatusInternalServerError,
+			).SendString("Failed to decode data")
 		}
-
-		fmt.Printf("Found a single document: %+v\n", result)
-
-		return c.SendString("Hello, MongoDB!")
+		spew.Dump(results)
+		// Return the data as JSON
+		return c.JSON(results)
 	})
 
 	app.Post("/", func(c *fiber.Ctx) error {
-		spew.Dump(c.Body())
-		fmt.Println(string(c.Body()))
 		beeData := new(Data)
 		if err := c.BodyParser(beeData); err != nil {
 			fmt.Println("Error: ", err)
 			return c.SendStatus(200)
 		}
-		spew.Dump(beeData)
+		date := beeData.Time
+		date = strings.ReplaceAll(date, "/", "-")
+		date = strings.ReplaceAll(date, ",", "T")
+		beeData.Time = date[:len(date)-3]
 		insertResult, err := collection.InsertOne(ctx, beeData) // Use the context
 		if err != nil {
 			log.Println(err) // Don't Fatal, handle the error
