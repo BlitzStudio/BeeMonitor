@@ -11,6 +11,9 @@
     <div class="w-[800px]">
       <canvas id="chart"></canvas>
     </div>
+    <div class="w-[800px]">
+      <canvas id="chartMass"></canvas>
+    </div>
     <script>
       let time = [];
       let tempsInside = [];
@@ -34,6 +37,18 @@
               borderColor: "blue", // Add a color for visibility
               tension: 0.1, // Add tension for smoother lines
             },
+          ],
+        },
+        options: {
+          animation: false, // Disable initial animation
+        },
+      });
+
+      const chartMass = new Chart(document.getElementById("chartMass"), {
+        type: "line",
+        data: {
+          labels: time,
+          datasets: [
             {
               label: "Masa",
               data: mass,
@@ -68,11 +83,13 @@
           chart.data.labels = time;
           chart.data.datasets[0].data = tempsInside;
           chart.data.datasets[1].data = tempOutside;
-          chart.data.datasets[2].data = mass;
 
+          chartMass.data.labels = time;
+          chartMass.data.datasets[0].data = mass;
           console.log("Time:", time);
 
           chart.update(); // Update the chart with the new data
+          chartMass.update();
         } catch (error) {
           console.error("Fetch error:", error.message);
         }

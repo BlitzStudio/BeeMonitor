@@ -137,7 +137,7 @@ void analyzeData()
 
         Serial.println("Roieste");
         swarmDetected = 1;
-        modem.sendSMS("+40770672051", "Roieste");
+        modem.sendSMS("+40770672051", "Roieste, pentru mai multe detalii verifica https://beemonitor.blitzcloud.me/temps");
       }
       else if (stdDev[i] < 0.4 && swarmDetected)
       {
@@ -236,12 +236,13 @@ void loop()
   Serial.println("Making POST request");
   String contentType = "application/json";
   char data[128];
-  sprintf(data, "{\"tempInside\":%d.%d,\"tempOutside\":%d.%d,\"time\":\"%s\",\"mass\":%d.%d,\"name\":\"Arduino/V1.0\"}", int(tempInside), (int(tempInside * 100) % 100), int(tempOutside), (int(tempOutside * 100) % 100), int(mass), (int(mass * 100) % 100), time.c_str());
+  sprintf(data, "{\"tempInside\":%d.%d,\"tempOutside\":%d.%d,\"time\":\"%s\",\"mass\":%d.%d,\"name\":\"Arduino/V1.0\"}", int(tempInside), (int(tempInside * 100) % 100), int(tempOutside), (int(tempOutside * 100) % 100), time.c_str(), int(mass), (int(mass * 100) % 100));
   Serial.println(data);
   httpClient.post("/", contentType, data);
   int statusCode = httpClient.responseStatusCode();
   String response = httpClient.responseBody();
-
+  Serial.print("Status code ");
+  Serial.println(statusCode);
   analyzeData();
   if (statusCode < 0)
   {
