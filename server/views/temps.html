@@ -15,6 +15,7 @@
       let time = [];
       let tempsInside = [];
       let tempOutside = [];
+      let mass = [];
 
       const chart = new Chart(document.getElementById("chart"), {
         type: "line",
@@ -31,6 +32,12 @@
               label: "Temperatura la exterior",
               data: tempOutside,
               borderColor: "blue", // Add a color for visibility
+              tension: 0.1, // Add tension for smoother lines
+            },
+            {
+              label: "Masa",
+              data: mass,
+              borderColor: "yellow", // Add a color for visibility
               tension: 0.1, // Add tension for smoother lines
             },
           ],
@@ -56,10 +63,12 @@
           });
           tempsInside = json.map((element) => element.tempInside);
           tempOutside = json.map((element) => element.tempOutside);
+          mass = json.map((element) => element.mass);
 
           chart.data.labels = time;
           chart.data.datasets[0].data = tempsInside;
           chart.data.datasets[1].data = tempOutside;
+          chart.data.datasets[2].data = mass;
 
           console.log("Time:", time);
 
@@ -73,7 +82,7 @@
       updateChartData();
 
       // Schedule updates every 6 seconds
-      setInterval(updateChartData, 60000);
+      setInterval(updateChartData, 10000);
     </script>
   </body>
 </html>

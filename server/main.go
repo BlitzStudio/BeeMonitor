@@ -20,6 +20,7 @@ type Data struct {
 	TempInside  float64 `bson:"tempInside" json:"tempInside"`
 	TempOutside float64 `bson:"tempOutside" json:"tempOutside"`
 	Time        string  `bson:"date" json:"time"`
+	Mass        float64 `bson:"mass" json:"mass"`
 }
 
 func main() {

@@ -1,3 +1,4 @@
+#include <HX711.h>
 #include <time.h>
 #include <string.h>
 #include <Stream.h>
@@ -130,19 +131,13 @@ void analyzeData()
     {
       if (stdDev[i] < lastStd)
       {
-
-        Serial.println("Scadere");
-        // cout << "Scadere" << endl;
       }
       else if (stdDev[i] > 0.4 && !swarmDetected)
       {
 
         Serial.println("Roieste");
-        Serial.println(lastStd);
-        Serial.println(stdDev[i]);
         swarmDetected = 1;
         modem.sendSMS("+40770672051", "Roieste");
-        // cout << "Roieste cacatul" << endl;
       }
       else if (stdDev[i] < 0.4 && swarmDetected)
       {
@@ -159,10 +154,28 @@ void analyzeData()
   delete[] stdDev;
 }
 
+HX711 scale;
 void setup()
 {
+
   Serial.begin(9600);
+  Serial.println("HX711 Demo");
+  Serial.println("Initializing the scale");
+
+  scale.begin(40, 3);
+
+  // by the SCALE parameter (not set yet)
+
+  scale.set_scale(317.718);
+  scale.tare();
+
   sensors.begin();
+  sensors.requestTemperatures();
+  if (sensors.getTempCByIndex(0) == -127 || sensors.getTempCByIndex(1) == -127)
+  {
+    display.showCharacter("ET0", 3);
+    resetBoard();
+  }
   Serial.println("Wait...");
   sim800l.begin(9600);
   delay(6000);
@@ -183,6 +196,9 @@ void loop()
   sensors.requestTemperatures();
   float tempInside = sensors.getTempCByIndex(0);
   float tempOutside = sensors.getTempCByIndex(1);
+  float mass = scale.get_units(10);
+  Serial.println(mass);
+  delay(3000);
   // calibrare
   if (indexTemperaturi < 3)
   {
@@ -220,16 +236,12 @@ void loop()
   Serial.println("Making POST request");
   String contentType = "application/json";
   char data[128];
-  sprintf(data, "{\"tempInside\":%d.%d,\"tempOutside\":%d.%d,\"time\":\"%s\",\"name\":\"Arduino/V1.0\"}", int(tempInside), (int(tempInside * 100) % 100), int(tempOutside), (int(tempOutside * 100) % 100), time.c_str());
+  sprintf(data, "{\"tempInside\":%d.%d,\"tempOutside\":%d.%d,\"time\":\"%s\",\"mass\":%d.%d,\"name\":\"Arduino/V1.0\"}", int(tempInside), (int(tempInside * 100) % 100), int(tempOutside), (int(tempOutside * 100) % 100), int(mass), (int(mass * 100) % 100), time.c_str());
   Serial.println(data);
   httpClient.post("/", contentType, data);
   int statusCode = httpClient.responseStatusCode();
   String response = httpClient.responseBody();
 
-  Serial.print("Status code: ");
-  Serial.println(statusCode);
-  Serial.print("Response: ");
-  Serial.println(response);
   analyzeData();
   if (statusCode < 0)
   {
