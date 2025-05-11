@@ -134,7 +134,9 @@ void analyzeData()
       }
       else if (stdDev[i] > 0.4 && !swarmDetected)
       {
-
+        digitalWrite(38, HIGH);
+        delay(300);
+        digitalWrite(38, LOW);
         Serial.println("Roieste");
         swarmDetected = 1;
         modem.sendSMS("+40770672051", "Roieste, pentru mai multe detalii verifica https://beemonitor.blitzcloud.me/temps");
@@ -158,6 +160,7 @@ HX711 scale;
 void setup()
 {
 
+  pinMode(38, OUTPUT);
   Serial.begin(9600);
   Serial.println("HX711 Demo");
   Serial.println("Initializing the scale");
@@ -236,6 +239,10 @@ void loop()
   Serial.println("Making POST request");
   String contentType = "application/json";
   char data[128];
+  if (mass < 0.0)
+  {
+    mass = 0.0;
+  }
   sprintf(data, "{\"tempInside\":%d.%d,\"tempOutside\":%d.%d,\"time\":\"%s\",\"mass\":%d.%d,\"name\":\"Arduino/V1.0\"}", int(tempInside), (int(tempInside * 100) % 100), int(tempOutside), (int(tempOutside * 100) % 100), time.c_str(), int(mass), (int(mass * 100) % 100));
   Serial.println(data);
   httpClient.post("/", contentType, data);
