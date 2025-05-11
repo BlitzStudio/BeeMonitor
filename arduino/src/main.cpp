@@ -10,12 +10,17 @@
 #include <BlitzCloudDisplayController.h>
 
 void (*resetBoard)(void) = 0;
+
+double TemperaturiInterioare[6];
+int indexTemperaturi = 0;
+int swarmDetected = 0;
+
 void connectSimToNetwork();
 // SIM AND HTTP CLIENT
 #define TINY_GSM_MODEM_SIM800
 #include <TinyGsmClient.h>
 
-SoftwareSerial sim800l(3, 2);
+SoftwareSerial sim800l(10, 11);
 
 // DEBUGGING
 // #define DUMP_AT_COMMANDS
@@ -45,6 +50,115 @@ OneWire oneWire(ONE_WIRE_BUS);
 // Pass our oneWire reference to Dallas Temperature sensor
 DallasTemperature sensors(&oneWire);
 
+void calculateSumInWindow(int length, int smaWindow, double data[],
+                          double *&sum, double (*func)(double, int))
+{
+  int i, j, poz = 0;
+  double suma;
+  sum = new double[length - smaWindow + 1];
+  for (i = smaWindow - 1; i < length; i++)
+  {
+    suma = 0.0;
+    for (j = 0; j < smaWindow; j++)
+    {
+      suma += data[i - smaWindow + 1 + j];
+    }
+    sum[poz++] = func(suma, smaWindow);
+  }
+}
+
+void calculateSumOfSquaresInWindow(int length, int smaWindow, double data[],
+                                   double *&sum)
+{
+  int i, j, poz = 0;
+  double suma;
+  sum = new double[length - smaWindow + 1];
+  for (i = smaWindow - 1; i < length; i++)
+  {
+    suma = 0.0;
+    for (j = 0; j < smaWindow; j++)
+    {
+      suma += pow(data[i - smaWindow + 1 + j], 2);
+    }
+    sum[poz++] = suma;
+  }
+}
+
+// Modified: No longer used. `num` is the sum, the `windowSize` determines what we want to return
+double calculateSum(double num, int windowSize) { return num; }
+
+double calculateSma(double num, int windowSize) { return num / windowSize; }
+
+double calculatePow2(double num, int windowSize) { return num * num; }
+
+void analyzeData()
+{
+
+  double *sum = nullptr;
+  double *sma = nullptr;
+  double *sumOfSquares = nullptr; // Name changed for clarity
+  double *stdDev = nullptr;       // Added to store the standard deviation
+  int windowSize = 3;             // Explicitly define the window size
+  double lastStd = 0.0;
+  // Calculate sum of the data inside windows
+  calculateSumInWindow(indexTemperaturi, windowSize, TemperaturiInterioare, sum, calculateSum);
+
+  // Calculate SMA based on the data sum
+  calculateSumInWindow(indexTemperaturi, windowSize, TemperaturiInterioare, sma, calculateSma);
+
+  // Calculate the sum of squares for the numbers
+  calculateSumOfSquaresInWindow(indexTemperaturi, windowSize, TemperaturiInterioare, sumOfSquares);
+
+  // Allocate the correct memory space
+  stdDev = new double[indexTemperaturi - windowSize + 1];
+
+  for (int i = 0; i < indexTemperaturi - windowSize + 1; i++)
+  {
+    stdDev[i] = sumOfSquares[i] / windowSize - sma[i] * sma[i];
+    // Check if it is negative due to floating point errors
+    if (stdDev[i] < 0)
+    {
+      stdDev[i] = 0;
+    }
+    stdDev[i] = sqrt(stdDev[i] * windowSize / (windowSize - 1));
+
+    if (lastStd == 0.0)
+    {
+      lastStd = stdDev[i];
+    }
+    else
+    {
+      if (stdDev[i] < lastStd)
+      {
+
+        Serial.println("Scadere");
+        // cout << "Scadere" << endl;
+      }
+      else if (stdDev[i] > 0.4 && !swarmDetected)
+      {
+
+        Serial.println("Roieste");
+        Serial.println(lastStd);
+        Serial.println(stdDev[i]);
+        swarmDetected = 1;
+        modem.sendSMS("+40770672051", "Roieste");
+        // cout << "Roieste cacatul" << endl;
+      }
+      else if (stdDev[i] < 0.4 && swarmDetected)
+      {
+        swarmDetected = 0;
+      }
+      lastStd = stdDev[i];
+    }
+  }
+
+  // Properly deallocate memory
+  delete[] sma;
+  delete[] sum;
+  delete[] sumOfSquares;
+  delete[] stdDev;
+}
+
 void setup()
 {
   Serial.begin(9600);
@@ -66,20 +180,48 @@ void setup()
 
 void loop()
 {
-  unsigned int start = millis();
+  sensors.requestTemperatures();
+  float tempInside = sensors.getTempCByIndex(0);
+  float tempOutside = sensors.getTempCByIndex(1);
+  // calibrare
+  if (indexTemperaturi < 3)
+  {
+    Serial.println("Here");
+    TemperaturiInterioare[indexTemperaturi++] = tempInside;
+    delay(1000);
+    return;
+  }
+  else if (indexTemperaturi == 6)
+  {
+    Serial.println("Restructurare");
+    for (int i = 0; i < indexTemperaturi; i++)
+    {
+      Serial.println(TemperaturiInterioare[i]);
+    }
+    Serial.println();
+    for (int i = 0; i < indexTemperaturi - 1; i++)
+    {
+      TemperaturiInterioare[i] = TemperaturiInterioare[i + 1];
+    }
+    TemperaturiInterioare[indexTemperaturi - 1] = tempInside;
+    for (int i = 0; i < indexTemperaturi; i++)
+    {
+      Serial.println(TemperaturiInterioare[i]);
+    }
+  }
+  else
+  {
+    TemperaturiInterioare[indexTemperaturi++] = tempInside;
+  }
+  analyzeData();
 
   connectSimToNetwork();
-  String time = modem.getGSMDateTime(DATE_TIME);
-  Serial.println(time);
+  String time = modem.getGSMDateTime(DATE_FULL);
   Serial.println("Making POST request");
   String contentType = "application/json";
   char data[128];
-  sensors.requestTemperatures();
-  float tempInside = sensors.getTempCByIndex(0);
-  float tempOutside = 0.0;
   sprintf(data, "{\"tempInside\":%d.%d,\"tempOutside\":%d.%d,\"time\":\"%s\",\"name\":\"Arduino/V1.0\"}", int(tempInside), (int(tempInside * 100) % 100), int(tempOutside), (int(tempOutside * 100) % 100), time.c_str());
   Serial.println(data);
-  String testPayload = "testdata";
   httpClient.post("/", contentType, data);
   int statusCode = httpClient.responseStatusCode();
   String response = httpClient.responseBody();
@@ -88,11 +230,15 @@ void loop()
   Serial.println(statusCode);
   Serial.print("Response: ");
   Serial.println(response);
-  Serial.println("Wait five seconds");
-  Serial.print("Delta time:");
-  Serial.println(millis() - start);
+  analyzeData();
+  if (statusCode < 0)
+  {
+    modem.restart();
+    resetBoard();
+  }
+  Serial.println("Wait 45s");
 
-  delay(5000);
+  delay(1000);
 }
 
 void connectSimToNetwork()
