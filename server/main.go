@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,7 +25,7 @@ func main() {
 	// InsertToDb()
 	// MongoDB connection
 	client, err := mongo.NewClient(
-		options.Client().ApplyURI("mongodb://root:example@127.0.0.1:27017/"),
+		options.Client().ApplyURI("mongodb://root:example@mongo:27017/"),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -47,16 +46,15 @@ func main() {
 	// Fiber instance
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
-		AllowCredentials: true,
+		AllowOrigins: "*",
+		//AllowCredentials: true,
 	}))
 	// Routes
 	app.Get("/", func(c *fiber.Ctx) error {
 		// Calculate the time 30 minutes ago
-		thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Format(
+		thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Add(3 * time.Hour).Format(
 			time.RFC3339,
 		)
-
 		// Construct the filter to get data within the last 30 minutes
 		filter := bson.M{"date": bson.M{"$gte": thirtyMinutesAgo}}
 
@@ -77,7 +75,6 @@ func main() {
 				fiber.StatusInternalServerError,
 			).SendString("Failed to decode data")
 		}
-		spew.Dump(results)
 		// Return the data as JSON
 		return c.JSON(results)
 	})
@@ -91,7 +88,7 @@ func main() {
 		date := beeData.Time
 		date = strings.ReplaceAll(date, "/", "-")
 		date = strings.ReplaceAll(date, ",", "T")
-		beeData.Time = date[:len(date)-3]
+		beeData.Time = fmt.Sprintf("%s%s", "20", date[:len(date)-3])
 		insertResult, err := collection.InsertOne(ctx, beeData) // Use the context
 		if err != nil {
 			log.Println(err) // Don't Fatal, handle the error

@@ -27,7 +27,8 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
-  
+    ports:
+      - 27017:27017
     networks:
       - proxy
   mongo-express:
@@ -50,7 +51,6 @@ services:
       - "traefik.http.routers.dbInterface.middlewares=my-traefikBouncer@file,my-cloudflarewarp@file"
     networks:
       - proxy
-
 
 networks:
   proxy:
