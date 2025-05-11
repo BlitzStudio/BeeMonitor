@@ -5,10 +5,17 @@ go 1.24.2
 require github.com/gofiber/fiber v1.14.6
 
 require (
+	github.com/dlclark/regexp2 v1.11.5 // indirect
+	github.com/gofiber/template v1.8.3 // indirect
+)
+
+require (
+	github.com/alecthomas/chroma/v2 v2.17.2
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/gofiber/fiber/v2 v2.52.6 // indirect
-	github.com/gofiber/utils v0.0.10 // indirect
+	github.com/gofiber/template/html/v2 v2.1.3
+	github.com/gofiber/utils v1.1.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/schema v1.1.0 // indirect

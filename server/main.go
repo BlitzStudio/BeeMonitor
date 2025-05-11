@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/template/html/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -43,8 +44,16 @@ func main() {
 
 	collection := client.Database("testData").Collection("temps")
 
-	// Fiber instance
-	app := fiber.New()
+	engine := html.New("./views", ".html")
+
+	// Or from an embedded system
+	// See github.com/gofiber/embed for examples
+	// engine := html.NewFileSystem(http.Dir("./views", ".html"))
+
+	// Pass the engine to the Views
+	app := fiber.New(fiber.Config{
+		Views: engine,
+	})
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		//AllowCredentials: true,
@@ -99,6 +108,9 @@ func main() {
 		return c.SendStatus(200)
 	})
 
+	app.Get("/temps", func(c *fiber.Ctx) error {
+		return c.Render("temps", fiber.Map{})
+	})
 	// Start server
 	log.Fatal(app.Listen(":8030"))
 }

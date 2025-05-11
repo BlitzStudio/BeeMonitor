@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  </head>
+  <body class="w-screen">
+    <div class="w-[800px]">
+      <canvas id="chart"></canvas>
+    </div>
+    <script>
+      let time = [];
+      let tempsInside = [];
+      let tempOutside = [];
+
+      const chart = new Chart(document.getElementById("chart"), {
+        type: "line",
+        data: {
+          labels: time,
+          datasets: [
+            {
+              label: "Temperatura la interior",
+              data: tempsInside,
+              borderColor: "red", // Add a color for visibility
+              tension: 0.1, // Add tension for smoother lines
+            },
+            {
+              label: "Temperatura la exterior",
+              data: tempOutside,
+              borderColor: "blue", // Add a color for visibility
+              tension: 0.1, // Add tension for smoother lines
+            },
+          ],
+        },
+        options: {
+          animation: false, // Disable initial animation
+        },
+      });
+
+      async function updateChartData() {
+        const url = "https://beemonitor.blitzcloud.me/";
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Response status: ${response.status}`);
+          }
+
+          const json = await response.json();
+
+          time = json.map((element) => {
+            let date = new Date(Date.parse(element.time));
+            return `${date.getHours()}:${date.getMinutes()}`;
+          });
+          tempsInside = json.map((element) => element.tempInside);
+          tempOutside = json.map((element) => element.tempOutside);
+
+          chart.data.labels = time;
+          chart.data.datasets[0].data = tempsInside;
+          chart.data.datasets[1].data = tempOutside;
+
+          console.log("Time:", time);
+
+          chart.update(); // Update the chart with the new data
+        } catch (error) {
+          console.error("Fetch error:", error.message);
+        }
+      }
+
+      // Initial chart update
+      updateChartData();
+
+      // Schedule updates every 6 seconds
+      setInterval(updateChartData, 60000);
+    </script>
+  </body>
+</html>

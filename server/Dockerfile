@@ -20,6 +20,9 @@ FROM alpine:latest as release
 
 WORKDIR /app
 
+RUN mkdir ./views
+COPY ./views ./views
+
 # Create the `public` dir and copy all the assets into it
 # RUN mkdir ./views
 # COPY ./views ./views
